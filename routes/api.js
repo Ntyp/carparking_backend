@@ -32,6 +32,7 @@ const {
   goInCarparking,
   cancelBooking,
   cronjob,
+  bookingHistoryOwner,
 } = require("../controllers/booking");
 
 const {
@@ -194,5 +195,10 @@ router.get("/owner-status-carparking/:id", countStatus);
 //@Method       GET
 //@Access       Publish
 router.post("/owner-update-status-carparking", updateStatusCarparking);
+
+//@Endpoint     http://localhost:6969/api/booking
+//@Method       GET
+//@Access       Publish
+router.get("/owner-booking-history/:id", bookingHistoryOwner);
 
 module.exports = router;

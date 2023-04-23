@@ -496,3 +496,30 @@ exports.cancelBooking = (req, res) => {
     );
   }
 };
+
+exports.bookingHistoryOwner = async (req, res) => {
+  const id = [req.params["id"]];
+
+  db.query(
+    "SELECT * FROM carparking WHERE carparking_owner = ?",
+    id,
+    function (err, results) {
+      if (err) {
+        res.json({ status: "400", message: err, success: false });
+        return;
+      }
+      const carparking_id = results[0].carparking_id;
+      db.query(
+        "SELECT * FROM booking WHERE booking_place_id = ? ORDER BY booking_id DESC",
+        carparking_id,
+        function (err, results) {
+          if (err) {
+            res.json({ status: "400", message: err, success: false });
+            return;
+          }
+          res.json({ status: "200", data: results, success: true });
+        }
+      );
+    }
+  );
+};
