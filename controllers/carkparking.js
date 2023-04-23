@@ -48,6 +48,7 @@ exports.getCarparking = async (req, res) => {
   );
 };
 
+// มีselect option เลือก Owner
 exports.createCarparking = async (req, res) => {
   const name = req.body.name;
   const nameTh = req.body.nameTh;
@@ -62,54 +63,69 @@ exports.createCarparking = async (req, res) => {
   const token = req.body.token;
   const owner = req.body.owner;
 
-  db.execute(
-    "INSERT INTO carparking (carparking_name, carparking_name_th, carparking_name_en, carparking_quantity, carparking_price, carparking_district, carparking_status, carparking_img, carparking_detail, carparking_url, carparking_token, carparking_owner) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
-    [
-      name,
-      nameTh,
-      nameEn,
-      quantity,
-      price,
-      district,
-      status,
-      image,
-      detail,
-      url,
-      token,
-      owner,
-    ],
+  //db.query(
+  db.query(
+    "SELECT * FROM users WHERE user_username = ?",
+    [owner],
     function (err, results, fields) {
       if (err) {
-        res.json({ status: "400", message: err, success: false });
-        return;
+        return res.json({ status: "400", message: err, success: false });
       }
-      db.query(
-        "SELECT carparking_id,carparking_quantity FROM carparking WHERE carparking_name = ?",
-        [name],
+      const user_owner = results[0].id;
+      db.execute(
+        "INSERT INTO carparking (carparking_name, carparking_name_th, carparking_name_en, carparking_quantity, carparking_price, carparking_district, carparking_status, carparking_img, carparking_detail, carparking_url, carparking_token, carparking_owner) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        [
+          name,
+          nameTh,
+          nameEn,
+          quantity,
+          price,
+          district,
+          status,
+          image,
+          detail,
+          url,
+          token,
+          user_owner,
+        ],
         function (err, results, fields) {
           if (err) {
-            return res.json({ status: "400", message: err, success: false });
+            res.json({ status: "400", message: err, success: false });
+            return;
           }
-          let carparking_id = results[0].carparking_id;
-          let status_lane = 0;
-          for (let lane = 1; lane <= quantity; lane++) {
-            db.execute(
-              "INSERT INTO carparking_lane (carparking_id, lane_id, status,user_id) VALUES (?,?,?,?)",
-              [carparking_id, lane, status_lane, null],
-              function (err, results, fields) {
-                if (err) {
-                  return res.json({
-                    status: "400",
-                    message: err,
-                    success: false,
-                  });
-                }
+          db.query(
+            "SELECT carparking_id,carparking_quantity FROM carparking WHERE carparking_name = ?",
+            [name],
+            function (err, results, fields) {
+              if (err) {
+                return res.json({
+                  status: "400",
+                  message: err,
+                  success: false,
+                });
               }
-            );
-          }
+              let carparking_id = results[0].carparking_id;
+              let status_lane = 0;
+              for (let lane = 1; lane <= quantity; lane++) {
+                db.execute(
+                  "INSERT INTO carparking_lane (carparking_id, lane_id, status,user_id) VALUES (?,?,?,?)",
+                  [carparking_id, lane, status_lane, null],
+                  function (err, results, fields) {
+                    if (err) {
+                      return res.json({
+                        status: "400",
+                        message: err,
+                        success: false,
+                      });
+                    }
+                  }
+                );
+              }
+            }
+          );
+          return res.json({ status: "200", success: "true" });
         }
       );
-      return res.json({ status: "200", success: "true" });
     }
   );
 };
@@ -201,3 +217,5 @@ exports.searchCarparking = (req, res) => {
     }
   );
 };
+
+// ค้นหาลานจอด

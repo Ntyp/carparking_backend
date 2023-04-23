@@ -130,12 +130,29 @@ exports.showUser = async (req, res) => {
 
 // Change permission
 exports.editUser = async (req, res) => {
-  try {
-    res.send("Edit User");
-  } catch (err) {
-    console.log(err);
-    res.json({ status: "500", message: err.message });
-  }
+  const user = req.body.id;
+  const role = req.body.role;
+  db.query(
+    "SELECT * FROM users WHERE user_username = ?",
+    user,
+    function (err, results, fields) {
+      console.log("results => ", results);
+      if (results) {
+        const id = results[0].id;
+        db.query(
+          "UPDATE users SET user_status = ? WHERE id = ?",
+          [role, id],
+          function (err, results, fields) {
+            if (err) {
+              res.json({ status: "500", message: err });
+              return;
+            }
+            res.json({ status: "200", success: true });
+          }
+        );
+      }
+    }
+  );
 };
 
 exports.deleteUser = async (req, res) => {

@@ -80,7 +80,7 @@ router.delete("/user/:id", deleteUser);
 //@Endpoint     http://localhost:6969/api/user/:id
 //@Method       PUT
 //@Access       Publish
-router.put("/user/:id", editUser);
+router.post("/edituser", editUser);
 
 //@Endpoint     http://localhost:6969/api/user/:id
 //@Method       DELETE
