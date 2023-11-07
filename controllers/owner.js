@@ -59,7 +59,7 @@ exports.countToday = (req, res) => {
       }
       const carparking_id = results[0]?.carparking_id;
       db.query(
-        "SELECT COUNT(booking_id) as count FROM booking WHERE booking_place_id = ? AND booking_date = ?",
+        "SELECT COUNT(booking_id) as count FROM carbooking WHERE booking_place_id = ? AND booking_date = ?",
         [carparking_id, date],
         function (err, results, fields) {
           if (err) {
@@ -87,7 +87,7 @@ exports.summaryToday = (req, res) => {
       }
       const carparking_id = results[0]?.carparking_id;
       db.query(
-        "SELECT SUM(booking_price) as money FROM booking WHERE booking_place_id = ? AND booking_date = ?",
+        "SELECT SUM(booking_price) as money FROM carbooking WHERE booking_place_id = ? AND booking_date = ?",
         [carparking_id, date],
         function (err, results, fields) {
           if (err) {
@@ -105,7 +105,7 @@ exports.summaryDate = (req, res) => {
   const carparking_id = [req.params["id"]];
   const date = [req.params["date"]];
   db.query(
-    "SELECT SUM(booking_price) FROM booking WHERE booking_place_id = ? AND booking_date = ?",
+    "SELECT SUM(booking_price) FROM carbooking WHERE booking_place_id = ? AND booking_date = ?",
     [carparking_id, date],
     function (err, results, fields) {
       if (err) {
@@ -122,7 +122,7 @@ exports.updateStatusCarparking = async (req, res) => {
   const id = req.body.id;
   const status = req.body.status;
   db.query(
-    "UPDATE carparking SET carparking_status = ? WHERE carparking_owner = ?",
+    "UPDATE carparking_detail SET carparking_status = ? WHERE carparking_owner = ?",
     [status, id],
     function (err, results, fields) {
       if (err) {
@@ -138,8 +138,37 @@ exports.updateStatusCarparking = async (req, res) => {
 exports.listAllBooking = (req, res) => {
   const carparking_id = [req.params["id"]];
   db.query(
-    "SELECT * FROM booking WHERE booking_place_id = ?",
+    "SELECT * FROM carbooking WHERE booking_place_id = ?",
     [carparking_id],
+    function (err, results, fields) {
+      if (err) {
+        res.json({ status: "400", message: err });
+        return;
+      }
+      res.json({ status: "200", data: results, success: true });
+    }
+  );
+};
+
+exports.getParkingHistoryByPlace = async (req, res) => {
+  const name = [req.params["name"]]; // carparking
+  db.query(
+    "SELECT * FROM carbooking WHERE booking_place = ? ORDER BY booking_id DESC",
+    name,
+    function (err, results, fields) {
+      if (err) {
+        res.json({ status: "400", message: err });
+        return;
+      }
+      res.json({ status: "200", data: results, success: true });
+    }
+  );
+};
+
+exports.listOwnerOnly = async (req, res) => {
+  db.query(
+    "SELECT user_username FROM user WHERE user_status = ?",
+    ['owner'],
     function (err, results, fields) {
       if (err) {
         res.json({ status: "400", message: err });

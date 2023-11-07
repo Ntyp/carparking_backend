@@ -9,7 +9,7 @@ exports.register = (req, res) => {
     const salt = 10;
     bcrypt.hash(password, salt, function (err, hash) {
       db.execute(
-        "INSERT INTO users (user_username,user_password,user_status,user_cancel) VALUES (?,?,?,?)",
+        "INSERT INTO user (user_username,user_password,user_status,user_cancel) VALUES (?,?,?,?)",
         [username, hash, "user", 0],
         function (err, results, fields) {
           if (err) {
@@ -29,7 +29,7 @@ exports.register = (req, res) => {
 exports.login = async (req, res) => {
   let { username, password } = req.body;
   db.execute(
-    "SELECT * FROM users WHERE user_username = ?",
+    "SELECT * FROM user WHERE user_username = ?",
     [username],
     function (err, users, fields) {
       if (err) {
@@ -102,7 +102,7 @@ exports.logout = async (req, res) => {
 // Get users all
 exports.listUser = async (req, res) => {
   try {
-    db.query("SELECT * FROM users", function (err, results, fields) {
+    db.query("SELECT * FROM user", function (err, results, fields) {
       console.log("results => ", results);
       res.json({ status: "200", data: results, success: true });
     });
@@ -116,7 +116,7 @@ exports.showUser = async (req, res) => {
   const id = [req.params["id"]];
   try {
     db.query(
-      "SELECT * FROM users WHERE id = ?",
+      "SELECT * FROM user WHERE id = ?",
       id,
       function (err, results, fields) {
         console.log("results => ", results);
@@ -130,18 +130,17 @@ exports.showUser = async (req, res) => {
 
 // Change permission
 exports.editUser = async (req, res) => {
-  const user = req.body.id;
-  const role = req.body.role;
+  const data = req.body;
   db.query(
-    "SELECT * FROM users WHERE user_username = ?",
-    user,
+    "SELECT * FROM user WHERE user_username = ?",
+    [data.username],
     function (err, results, fields) {
       console.log("results => ", results);
       if (results) {
         const id = results[0].id;
         db.query(
-          "UPDATE users SET user_status = ? WHERE id = ?",
-          [role, id],
+          "UPDATE user SET user_status = ? WHERE user_username = ?",
+          [data.role, data.username],
           function (err, results, fields) {
             if (err) {
               res.json({ status: "500", message: err });
@@ -150,6 +149,8 @@ exports.editUser = async (req, res) => {
             res.json({ status: "200", success: true });
           }
         );
+      }else{
+        res.json({ status: "500", message: "User not found!" });
       }
     }
   );
@@ -158,7 +159,7 @@ exports.editUser = async (req, res) => {
 exports.deleteUser = async (req, res) => {
   const id = [req.params["id"]];
   db.query(
-    "DELETE FROM users WHERE id = ?",
+    "DELETE FROM user WHERE id = ?",
     id,
     function (err, results, fields) {
       if (err) {

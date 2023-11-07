@@ -19,6 +19,13 @@ const {
   getCarparking,
   createCarparking,
   deleteCarparking,
+  createCarparking1,
+  getCarparkingByOwner,
+  getParkingLaneStatus,
+  getParkingInfo,
+  getCarParkingList,
+  updateLaneStatus,
+  updateCarparkingStatus
 } = require("../controllers/carkparking");
 
 const {
@@ -33,6 +40,8 @@ const {
   cancelBooking,
   cronjob,
   bookingHistoryOwner,
+  createBooking1,
+  updateCancelBooking,
 } = require("../controllers/booking");
 
 const {
@@ -41,7 +50,11 @@ const {
   summaryDate,
   countToday,
   updateStatusCarparking,
+  getParkingHistoryByPlace,
+  listOwnerOnly,
 } = require("../controllers/owner");
+
+const { listUserOnly } = require("../controllers/admin");
 
 //@Endpoint     http://localhost:6969/api/users
 //@Method       GET
@@ -105,12 +118,23 @@ router.get("/carparking/:id", getCarparking);
 //@Endpoint     http://localhost:6969/api/carparking/:id
 //@Method       POST
 //@Access       Publish
-router.post("/carparking", createCarparking);
+router.post("/carparking", createCarparking1);
+// router.post("/carparking", createCarparking);
 
 //@Endpoint     http://localhost:6969/api/carparking/:id
 //@Method       DELETE
 //@Access       Publish
 router.delete("/carparking/:id", deleteCarparking);
+
+router.get("/getCarparkingByOwner/:owner", getCarparkingByOwner);
+router.get("/getParkingInfo/:id", getParkingInfo);
+router.get("/getParkingLaneStatus/:id", getParkingLaneStatus);
+
+router.get("/getParkingHistoryByPlace/:name", getParkingHistoryByPlace);
+router.get("/getCarParkingList", getCarParkingList); //ต้องแก้ไข Middleware
+
+router.post("/booking1", createBooking1);
+router.post("/updateCancelBooking", updateCancelBooking);
 
 // ============================================
 // Booking
@@ -200,5 +224,16 @@ router.post("/owner-update-status-carparking", updateStatusCarparking);
 //@Method       GET
 //@Access       Publish
 router.get("/owner-booking-history/:id", bookingHistoryOwner);
+
+router.get("/listUserOnly", listUserOnly);
+router.get("/listOwnerOnly", listOwnerOnly);
+
+
+router.post("/updateLaneStatus", updateLaneStatus);
+router.post("/updateCarparkingStatus", updateCarparkingStatus);
+
+
+
+
 
 module.exports = router;
