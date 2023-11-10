@@ -25,6 +25,6 @@ db.connect((err) => {
 });
 
 const PORT_BACKEND = process.env.PORT_BACKEND || 6969 ;
-app.listen(PORT_BACKEND || 6969, function () {
+app.listen(process.env.PORT_BACKEND || PORT_BACKEND, function () {
   console.log(`Server is running on PORT_BACKEND:${PORT_BACKEND}`);
 });
