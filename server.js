@@ -291,7 +291,7 @@ db.connect((err) => {
   console.log("Database  Connected!!");
 });
 
-const PORT = process.env.PORT;
-app.listen(6969, function () {
+const PORT = process.env.PORT || 6969 ;
+app.listen(PORT, function () {
   console.log(`Server is running on PORT:${PORT}`);
 });
