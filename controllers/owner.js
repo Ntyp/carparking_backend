@@ -50,23 +50,34 @@ exports.countToday = (req, res) => {
   const owner = [req.params["id"]];
   const date = [req.params["date"]];
   db.query(
-    "SELECT * FROM carparking WHERE carparking_owner = ?",
+    "SELECT * FROM user WHERE id = ?",
     [owner],
     function (err, results, fields) {
       if (err) {
         res.json({ status: "400", message: err });
         return;
       }
-      const carparking_id = results[0]?.carparking_id;
+      const value = results[0].user_username;
       db.query(
-        "SELECT COUNT(booking_id) as count FROM carbooking WHERE booking_place_id = ? AND booking_date = ?",
-        [carparking_id, date],
+        "SELECT * FROM carparking_detail WHERE carparking_owner = ?",
+        [value],
         function (err, results, fields) {
           if (err) {
             res.json({ status: "400", message: err });
             return;
           }
-          res.json({ status: "200", data: results, success: true });
+          const carparking_id = results[0]?.carparking_id;
+          db.query(
+            "SELECT COUNT(booking_id) as count FROM carbooking WHERE booking_place_id = ? AND booking_date = ?",
+            [carparking_id, date],
+            function (err, results, fields) {
+              if (err) {
+                res.json({ status: "400", message: err });
+                return;
+              }
+              res.json({ status: "200", data: results, success: true });
+            }
+          );
         }
       );
     }
@@ -78,23 +89,34 @@ exports.summaryToday = (req, res) => {
   const id = [req.params["id"]];
   const date = [req.params["date"]];
   db.query(
-    "SELECT * FROM carparking WHERE carparking_owner = ?",
+    "SELECT * FROM user WHERE id = ?",
     [id],
     function (err, results, fields) {
       if (err) {
         res.json({ status: "400", message: err });
         return;
       }
-      const carparking_id = results[0]?.carparking_id;
+      const value = results[0].user_username;
       db.query(
-        "SELECT SUM(booking_price) as money FROM carbooking WHERE booking_place_id = ? AND booking_date = ?",
-        [carparking_id, date],
+        "SELECT * FROM carparking_detail WHERE carparking_owner = ?",
+        [value],
         function (err, results, fields) {
           if (err) {
             res.json({ status: "400", message: err });
             return;
           }
-          res.json({ status: "200", data: results, success: true });
+          const carparking_id = results[0]?.carparking_id;
+          db.query(
+            "SELECT SUM(booking_price) as money FROM carbooking WHERE booking_place_id = ? AND booking_date = ?",
+            [carparking_id, date],
+            function (err, results, fields) {
+              if (err) {
+                res.json({ status: "400", message: err });
+                return;
+              }
+              res.json({ status: "200", data: results, success: true });
+            }
+          );
         }
       );
     }
@@ -151,15 +173,17 @@ exports.listAllBooking = (req, res) => {
 };
 
 exports.getParkingHistoryByPlace = async (req, res) => {
-  const name = [req.params["name"]]; // carparking
+  const id = [req.params["id"]]; // carparking
+  console.log("id", id);
   db.query(
-    "SELECT * FROM carbooking WHERE booking_place = ? ORDER BY booking_id DESC",
-    name,
+    "SELECT * FROM carbooking WHERE booking_place_id = ? ORDER BY booking_id DESC",
+    id,
     function (err, results, fields) {
       if (err) {
         res.json({ status: "400", message: err });
         return;
       }
+      console.log("results", results);
       res.json({ status: "200", data: results, success: true });
     }
   );
@@ -168,7 +192,7 @@ exports.getParkingHistoryByPlace = async (req, res) => {
 exports.listOwnerOnly = async (req, res) => {
   db.query(
     "SELECT user_username FROM user WHERE user_status = ?",
-    ['owner'],
+    ["owner"],
     function (err, results, fields) {
       if (err) {
         res.json({ status: "400", message: err });

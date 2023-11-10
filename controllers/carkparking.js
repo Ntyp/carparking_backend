@@ -100,7 +100,7 @@ exports.createCarparking1 = async (req, res) => {
       lanePromises.push(insertLanePromise);
       let timeRunning = new Date("2023-11-06T06:00:00");
       // 06.00 - 20.00
-      for (let j = 1; j <= 15; j++) {
+      for (let j = 1; j <= 30; j++) {
         const formattedTime = timeRunning.toTimeString().slice(0, 5);
         await new Promise((resolve, reject) => {
           db.execute(
@@ -117,7 +117,8 @@ exports.createCarparking1 = async (req, res) => {
         });
 
         // Increment timeRunning by 1 hour for the next insertion
-        timeRunning.setHours(timeRunning.getHours() + 1);
+        timeRunning.setMinutes(timeRunning.getMinutes() + 30);
+        // timeRunning.setHours(timeRunning.getHours() + 1);
       }
     }
 

@@ -17,7 +17,7 @@ exports.getBooking = async (req, res) => {
   const data = [req.params["id"]];
   const id = data[0];
   db.query(
-    "SELECT * FROM carbooking WHERE booking_id = ?",
+    "SELECT * FROM carbooking INNER JOIN carparking_detail ON carparking_detail.carparking_id = carbooking.booking_place_id WHERE carbooking.booking_id = ?",
     id,
     function (err, results, fields) {
       if (err) {
@@ -33,7 +33,7 @@ exports.getBookingById = async (req, res) => {
   const data = [req.params["id"]];
   const id = data[0];
   db.query(
-    "SELECT * FROM carbooking WHERE booking_user = ? ORDER BY booking_id DESC",
+    "SELECT * FROM carbooking  INNER JOIN carparking_detail ON carparking_detail.carparking_id =  carbooking.booking_place_id WHERE carbooking.booking_user = ? ORDER BY carbooking.booking_id DESC;",
     id,
     function (err, results) {
       if (err) {
@@ -183,47 +183,18 @@ exports.createBooking = (req, res) => {
 exports.createBooking1 = async (req, res) => {
   const data = req.body;
   const status = "รอเข้าจอด";
-  const promises = [];
-  console.log(data.timeIn);
-  console.log(data.timeOut);
-  console.log(data.id);
-
-  // SELECT carparking_lane_status.carparking_id,carparking_lane_status.lane_id,carparking_lane_status.lane_status,carparking_lane_status.user_booking,carparking_detail.carparking_token,carparking_lane_detail.status,carparking_lane_detail.status_open FROM carparking_lane_status INNER JOIN carparking_lane_detail ON carparking_lane_detail.carparking_id = carparking_lane_status.carparking_id INNER JOIN carparking_detail ON carparking_detail.carparking_id = carparking_lane_status.carparking_id WHERE carparking_lane_status.time_booking BETWEEN '16:00' AND '18:00' AND carparking_lane_detail.status_open = 0 AND carparking_lane_status.carparking_id = 2  LIMIT 1;
-  // หาเลนที่ว่างก่อน
-  // const findLane = new Promise((resolve, reject) => {
-  //   db.execute(
-  //     "SELECT carparking_lane_status.carparking_id,carparking_lane_status.lane_id,carparking_lane_status.lane_status,carparking_lane_status.user_booking,carparking_detail.carparking_token,carparking_lane_detail.status,carparking_lane_detail.status_open FROM carparking_lane_status INNER JOIN carparking_lane_detail ON carparking_lane_detail.carparking_id = carparking_lane_status.carparking_id INNER JOIN carparking_detail ON carparking_detail.carparking_id = carparking_lane_status.carparking_id WHERE carparking_lane_status.time_booking BETWEEN ? AND ? AND carparking_lane_detail.status_open = ? AND carparking_lane_status.carparking_id = ?  LIMIT 1",
-  //     [data.timeIn, data.timeOut, 0, data.id],
-  //     function (err, results, fields) {
-  //       if (err) {
-  //         reject(err);
-  //         return;
-  //       }
-  //       resolve();
-  //     }
-  //   );
-  // });
-  // promises.push(findLane);
-
+  console.log("data", data);
   db.query(
-    "SELECT carparking_lane_status.carparking_id,carparking_lane_status.lane_id,carparking_lane_status.lane_status,carparking_lane_status.user_booking,carparking_detail.carparking_token,carparking_lane_detail.status,carparking_lane_detail.status_open FROM carparking_lane_status INNER JOIN carparking_lane_detail ON carparking_lane_detail.carparking_id = carparking_lane_status.carparking_id INNER JOIN carparking_detail ON carparking_detail.carparking_id = carparking_lane_status.carparking_id WHERE carparking_lane_status.time_booking BETWEEN ? AND ? AND carparking_lane_detail.status_open = ? AND carparking_lane_status.carparking_id = ?  LIMIT 1",
-    [data.timeIn, data.timeOut, 0, data.id],
+    "SELECT * FROM carparking_lane_status INNER JOIN carparking_detail ON carparking_detail.carparking_id = carparking_lane_status.carparking_id WHERE   carparking_lane_status.lane_status = ? AND carparking_lane_status.carparking_id = ? AND carparking_lane_status.time_booking BETWEEN ? AND ? LIMIT 1",
+    [0, data.id, data.timeIn, data.timeOut],
     function (err, results) {
       if (err) {
-        res.json({
-          status: "400",
-          message: err,
-          success: false,
-        });
-        return;
+        return res.json({ status: "400", message: err, success: false });
       }
       if (results) {
-        console.log("results", results);
-
         const tokenBot = results[0].carparking_token;
         const laneId = results[0].lane_id;
-
-        db.execute(
+        db.query(
           "INSERT INTO carbooking (booking_place_id,booking_name,booking_tel,booking_plate,booking_lane,booking_time_in,booking_time_out,booking_date,booking_status,booking_user,is_cancel) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
           [
             data.id,
@@ -240,15 +211,8 @@ exports.createBooking1 = async (req, res) => {
           ],
           function (err, results, fields) {
             if (err) {
-              return res.json({
-                status: "400",
-                message: err,
-                success: false,
-              });
+              return res.json({ status: "400", message: err, success: false });
             }
-            // อัปเดตเลน
-            // UPDATE carparking_lane_status SET lane_status = 1 , user_booking = "1" WHERE time_booking BETWEEN '08:00' AND '18:00' AND carparking_id = 2 AND lane_id = 1;
-
             db.execute(
               "UPDATE carparking_lane_status SET lane_status = ? , user_booking = ? WHERE time_booking BETWEEN ? AND ? AND carparking_id = ? AND lane_id = ?",
               [1, data.user, data.timeIn, data.timeOut, data.id, laneId],
@@ -261,6 +225,7 @@ exports.createBooking1 = async (req, res) => {
                   });
                 }
                 if (tokenBot) {
+                  console.log("bot111");
                   const lineNotify = require("line-notify-nodejs")(tokenBot);
                   lineNotify
                     .notify({
@@ -269,44 +234,196 @@ exports.createBooking1 = async (req, res) => {
                     .then(() => {
                       console.log("send completed!");
                     });
-                }
-                // Cronjob สำหรับเปลี่ยนสถานะตอน 4 โมง
 
+                  console.log("bot555");
+                }
+                // ต้องมี cronjob อีกอันบอกเจ้าของที่ก่อน15นาทีว่าเดี๋ยวมีรถมาจอดที่นี้นะ
                 const [hoursTimeIn, minutesTimeIn] = data.timeIn.split(":");
                 const cronExpression = `${minutesTimeIn} ${hoursTimeIn} * * *`;
-
                 cron.schedule(cronExpression, () => {
                   db.execute(
                     "UPDATE carparking_lane_detail SET status = ? WHERE carparking_id = ? AND lane_id = ?",
                     [1, data.id, laneId],
                     function (err, results, fields) {
                       if (err) {
-                        return res.json({
+                        return res.status(400).json({
                           status: "400",
                           message: err,
                           success: false,
                         });
                       }
+                      console.log("timeinnnn11324");
                     }
                   );
                 });
-                res.json({
-                  status: "200",
-                  success: true,
+
+                const minutesTime15MinBefore =
+                  (parseInt(minutesTimeIn) - 15 + 60) % 60;
+                const hoursTime15MinBefore =
+                  minutesTimeIn === "00"
+                    ? (parseInt(hoursTimeIn) - 1 + 24) % 24
+                    : hoursTimeIn;
+
+                // Create the cron expression for the new job
+                const cronExpression15MinBefore = `${minutesTime15MinBefore} ${hoursTime15MinBefore} * * *`;
+                cron.schedule(cronExpression, () => {
+                  const lineNotify = require("line-notify-nodejs")(tokenBot);
+                  lineNotify
+                    .notify({
+                      message: `แจ้งเตือนการเตรียมการจอดรถช่องจอด:${laneId} ป้ายทะเบียน:${data.plate} เวลาเข้า:${data.timeIn} เวลาออก:${data.timeOut}`,
+                    })
+                    .then(() => {
+                      console.log("send completed!");
+                    });
                 });
+
+                return res.json({ status: "200", success: true });
               }
             );
           }
         );
+      } else {
+        return res.json({
+          status: "400",
+          message: "Car Parking Full!!!",
+          success: false,
+        });
       }
-      return res.json({
-        status: "400",
-        message: err,
-        success: false,
-      });
+      // return res.json({ status: "200", success: true });
+
+      // return res.json({ status: "200", data: results, success: true });
     }
   );
 };
+
+// exports.createBooking1 = async (req, res) => {
+//   const data = req.body;
+//   const status = "รอเข้าจอด";
+//   const promises = [];
+
+//   console.log("data", data);
+
+//   db.query(
+//     // "SELECT carparking_lane_status.carparking_id,carparking_lane_status.lane_id,carparking_lane_status.lane_status,carparking_lane_status.user_booking,carparking_detail.carparking_token,carparking_lane_detail.status,carparking_lane_detail.status_open FROM carparking_lane_status INNER JOIN carparking_lane_detail ON carparking_lane_detail.carparking_id = carparking_lane_status.carparking_id INNER JOIN carparking_detail ON carparking_detail.carparking_id = carparking_lane_status.carparking_id WHERE carparking_lane_status.time_booking BETWEEN ? AND ? AND carparking_lane_detail.status_open = ? AND carparking_lane_status.carparking_id = ?  LIMIT 1",
+//     "SELECT * FROM carparking_lane_status INNER JOIN carparking_detail ON carparking_detail.carparking_id = carparking_lane_status.carparking_id WHERE   carparking_lane_status.lane_status = ? AND carparking_lane_status.carparking_id = ? AND carparking_lane_status.time_booking BETWEEN ? AND ? LIMIT 1"[
+//       (data.timeIn, data.timeOut, 0, data.id)
+//     ],
+//     function (err, results) {
+//       if (err) {
+//         return res.json({
+//           status: "400",
+//           message: err,
+//           success: false,
+//         });
+//       }
+//       console.log("results", results);
+//       if (results) {
+//         // CvUGKaNeeNaXwZWBFjNFSYBNU9FrGCfuZb4tltkQ775
+//         const tokenBot = results[0].carparking_token;
+//         const laneId = results[0].lane_id;
+//         console.log("resuts", results);
+//         // ตัวนี้พัง
+//         // db.execute(
+//         //   "INSERT INTO carbooking (booking_place_id,booking_name,booking_tel,booking_plate,booking_lane,booking_time_in,booking_time_out,booking_date,booking_status,booking_user,is_cancel) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+//         //   [
+//         //     data.id,
+//         //     data.name,
+//         //     data.tel,
+//         //     data.plate,
+//         //     laneId,
+//         //     data.timeIn,
+//         //     data.timeOut,
+//         //     data.date,
+//         //     status,
+//         //     data.user,
+//         //     0,
+//         //   ],
+//         //   function (err, results, fields) {
+//         //     if (err) {
+//         //       return res.status(400).json({
+//         //         status: "400",
+//         //         message: err,
+//         //         success: false,
+//         //       });
+//         //     }
+//         // return res.status(200).json({
+//         //   status: "200",
+//         //   success: true,
+//         // });
+
+//         //     // อัปเดตเลน
+//         //     // UPDATE carparking_lane_status SET lane_status = 1 , user_booking = "1" WHERE time_booking BETWEEN '08:00' AND '18:00' AND carparking_id = 2 AND lane_id = 1;
+
+//         //     db.execute(
+//         //       "UPDATE carparking_lane_status SET lane_status = ? , user_booking = ? WHERE time_booking BETWEEN ? AND ? AND carparking_id = ? AND lane_id = ?",
+//         //       [1, data.user, data.timeIn, data.timeOut, data.id, laneId],
+//         //       function (err, results, fields) {
+//         //         if (err) {
+//         //           return res.json({
+//         //             status: "400",
+//         //             message: err,
+//         //             success: false,
+//         //           });
+//         //         }
+//         //         console.log("tokenBot", tokenBot);
+//         //         if (tokenBot) {
+//         //           console.log("bot111");
+//         //           const lineNotify = require("line-notify-nodejs")(tokenBot);
+//         //           lineNotify
+//         //             .notify({
+//         //               message: `แจ้งเตือนการจองที่จอดรถช่องจอด:${laneId} เวลาเข้า:${data.timeIn} เวลาออก:${data.timeOut}`,
+//         //             })
+//         //             .then(() => {
+//         //               console.log("send completed!");
+//         //             });
+
+//         //           console.log("bot555");
+//         //         }
+//         //         // Cronjob สำหรับเปลี่ยนสถานะตอน 4 โมง
+
+//         //         const [hoursTimeIn, minutesTimeIn] = data.timeIn.split(":");
+//         //         const cronExpression = `${minutesTimeIn} ${hoursTimeIn} * * *`;
+//         //         console.log("timeinnn");
+//         //         cron.schedule(cronExpression, () => {
+//         //           db.execute(
+//         //             "UPDATE carparking_lane_detail SET status = ? WHERE carparking_id = ? AND lane_id = ?",
+//         //             [1, data.id, laneId],
+//         //             function (err, results, fields) {
+//         //               if (err) {
+//         //                 return res.status(400).json({
+//         //                   status: "400",
+//         //                   message: err,
+//         //                   success: false,
+//         //                 });
+//         //               }
+//         //               console.log("timeinnnn11324");
+//         //             }
+//         //           );
+//         //         });
+//         //         return res.status(200).json({
+//         //           status: "200",
+//         //           success: true,
+//         //         });
+//         //       }
+//         //     );
+//         //   }
+//         // );
+
+//         return res.json({
+//           status: "200",
+//           data: results,
+//           success: true,
+//         });
+//       } else {
+//         return res.json({
+//           status: "400",
+//           message: err,
+//           success: false,
+//         });
+//       }
+//     }
+//   );
+// };
 
 exports.updateBooking = (req, res) => {
   //   db.query("SELECT * FROM parking", function (err, results, fields) {
@@ -631,7 +748,7 @@ exports.bookingHistoryOwner = async (req, res) => {
   const id = [req.params["id"]];
 
   db.query(
-    "SELECT * FROM carparking WHERE carparking_owner = ?",
+    "SELECT * FROM carparking_detail WHERE carparking_owner = ?",
     id,
     function (err, results) {
       if (err) {
@@ -654,7 +771,7 @@ exports.bookingHistoryOwner = async (req, res) => {
   );
 };
 
-exports.updateCancelBooking = (req, res) => {
+exports.updateCancelBooking1 = (req, res) => {
   const data = req.body;
   db.query(
     "SELECT * FROM carbooking WHERE booking_id = ?",
@@ -671,33 +788,48 @@ exports.updateCancelBooking = (req, res) => {
       const timeNow = moment();
 
       const timeDiff = timeStart.diff(timeNow, "minutes");
-      // ถ้าเกิน20นาทียกเลิกไม่ได้
-      if (timeDiff > 20) {
-        return res.json({
-          status: "400",
-          message: "Time over 20 minutes",
-          success: false,
-        });
-      }
-      // อัปเดตเลนจอง
+      // ถ้าเกิน15นาทียกเลิกไม่ได้
+      // if (timeDiff > 15) {
+      //   return res.json({
+      //     status: "400",
+      //     message: "Time over 15 minutes",
+      //     success: false,
+      //   });
+      // }
       db.query(
-        "UPDATE carparking_lane_status SET status = ?,user_booking = ? WHERE carparking = ? AND lane_id = ? AND time_booking BETWEEN ? AND ?",
-        [0, null, data.id, data.lane, data.timeIn, data.timeOut],
+        "UPDATE carparking_lane_status SET lane_status = ?,user_booking = ?  WHERE carparking_id = ? AND lane_id = ? AND time_booking BETWEEN ? AND ?",
+        [
+          0,
+          null,
+          value.booking_place_id,
+          value.booking_lane,
+          value.booking_time_in,
+          value.booking_time_out,
+        ],
         function (err, results) {
           if (err) {
             res.json({ status: "400", message: err, success: false });
             return;
           }
-          // res.json({ status: "200", success: true });
           db.query(
             "UPDATE user SET user_cancel = ? WHERE id = ?",
-            [1, data.user],
+            [1, value.booking_user],
             function (err, results) {
               if (err) {
                 res.json({ status: "400", message: err, success: false });
                 return;
               }
-              res.json({ status: "200", success: true });
+              db.query(
+                "DELETE FROM carbooking WHERE booking_id = ?",
+                [data.id],
+                function (err, results) {
+                  if (err) {
+                    res.json({ status: "400", message: err, success: false });
+                    return;
+                  }
+                  res.json({ status: "200", success: true });
+                }
+              );
             }
           );
         }
@@ -730,88 +862,228 @@ exports.updateCancelBooking = (req, res) => {
   // }
 };
 
+// exports.updateStatusGoInCarparking = async (req, res) => {
+//   const { place, id, user, lane } = req.body;
+//   const client = mqtt.connect("mqtt://broker.mqttdashboard.com:1883");
+//   client.on("connect", function () {
+//     client.subscribe("alert/status", function (err) {
+//       if (err) {
+//         console.log(err);
+//       }
+//     });
+//     client.publish(`barrier/status/${place}/${lane}`, "open");
+//   });
+//   client.on("message", function (topic, message) {
+//     const barrier_status = message.toString();
+//     console.log(barrier_status);
+//     if (barrier_status == "true") {
+//       client.end();
+//       db.query(
+//         "UPDATE carparking_lane_detail SET status = ?, user_id = ? WHERE carparking_id = ? AND lane_id = ?",
+//         [1, user, place, lane],
+//         function (err, results, fields) {
+//           if (err) {
+//             res.json({ status: "400", message: err });
+//             return;
+//           }
+//           db.query(
+//             "UPDATE carbooking SET booking_status = ?, booking_lane = ? WHERE booking_id = ?",
+//             ["กำลังจอด", lane, id],
+//             function (err, results, fields) {
+//               if (err) {
+//                 res.json({ status: "400", message: err });
+//                 return;
+//               }
+//               db.query(
+//                 "SELECT * FROM carparking_detail WHERE carparking_id = ?",
+//                 [place],
+//                 function (err, results, fields) {
+//                   if (err) {
+//                     res.json({ status: "400", message: err, success: false });
+//                     return;
+//                   }
+//                   const tokenBot = results[0].caparking_token;
+//                   if (tokenBot) {
+//                     const lineNotify = require("line-notify-nodejs")(tokenBot);
+//                     lineNotify
+//                       .notify({
+//                         message: `แจ้งเตือนนำรถเข้าช่องจอดที่่:${lane} เวลา:${moment().format(
+//                           "DD/MM/YYYY HH:mm:ss"
+//                         )}`,
+//                       })
+//                       .then(() => {
+//                         console.log("send completed!");
+//                       });
+//                   }
+//                   res.json({ status: "200", success: true });
+//                 }
+//               );
+//             }
+//           );
+//         }
+//       );
+//     } else {
+//       return res.json({
+//         status: "400",
+//         message: "Fail to detect your license plate",
+//       });
+//     }
+//   });
+// };
+
 exports.updateStatusGoInCarparking = async (req, res) => {
   const { place, id, user, lane } = req.body;
-  const client = mqtt.connect("mqtt://broker.mqttdashboard.com:1883");
-  client.on("connect", function () {
-    client.subscribe("alert/status", function (err) {
+  console.log(req.body);
+  db.query(
+    "UPDATE carparking_lane_detail SET status = ?, user_id = ? WHERE carparking_id = ? AND lane_id = ?",
+    [1, user, place, lane],
+    function (err, results, fields) {
       if (err) {
-        console.log(err);
+        res.json({ status: "400", message: err });
+        return;
       }
-    });
-    client.publish(`barrier/status/${place}/${lane}`, "open");
-  });
-  client.on("message", function (topic, message) {
-    const barrier_status = message.toString();
-    console.log(barrier_status);
-    if (barrier_status == "true") {
-      client.end();
       db.query(
-        "UPDATE carparking_lane_detail SET status = ?, user_id = ? WHERE carparking_id = ? AND lane_id = ?",
-        [1, user, place, lane],
+        "UPDATE carbooking SET booking_status = ?, booking_lane = ?,booking_goin = ? WHERE booking_id = ?",
+        ["กำลังจอด", lane, moment().format("HH:mm"), id],
         function (err, results, fields) {
           if (err) {
             res.json({ status: "400", message: err });
             return;
           }
           db.query(
-            "UPDATE carbooking SET booking_status = ?, booking_lane = ? WHERE booking_id = ?",
-            ["กำลังจอด", lane, id],
+            "SELECT * FROM carparking_detail WHERE carparking_id = ?",
+            [place],
             function (err, results, fields) {
               if (err) {
-                res.json({ status: "400", message: err });
+                res.json({ status: "400", message: err, success: false });
                 return;
               }
-              db.query(
-                "SELECT * FROM carparking_detail WHERE carparking_id = ?",
-                [place],
-                function (err, results, fields) {
-                  if (err) {
-                    res.json({ status: "400", message: err, success: false });
-                    return;
-                  }
-                  const tokenBot = results[0].caparking_token;
-                  if (tokenBot) {
-                    const lineNotify = require("line-notify-nodejs")(tokenBot);
-                    lineNotify
-                      .notify({
-                        message: `แจ้งเตือนนำรถเข้าช่องจอดที่่:${lane} เวลา:${moment().format(
-                          "DD/MM/YYYY HH:mm:ss"
-                        )}`,
-                      })
-                      .then(() => {
-                        console.log("send completed!");
-                      });
-                  }
-                  res.json({ status: "200", success: true });
-                }
-              );
+              const tokenBot = results[0].caparking_token;
+              if (tokenBot) {
+                const lineNotify = require("line-notify-nodejs")(tokenBot);
+                lineNotify
+                  .notify({
+                    message: `แจ้งเตือนนำรถเข้าช่องจอดที่่:${lane} เวลา:${moment().format(
+                      "DD/MM/YYYY HH:mm:ss"
+                    )}`,
+                  })
+                  .then(() => {
+                    console.log("send completed!");
+                  });
+              }
+              res.json({ status: "200", success: true });
             }
           );
         }
       );
-    } else {
-      return res.json({
-        status: "400",
-        message: "Fail to detect your license plate",
-      });
     }
-  });
+  );
 };
+
+// exports.updateStatusGoOutCarparking = (req, res) => {
+//   const id = req.body.id;
+//   const place = req.body.place;
+//   const lane = req.body.lane;
+//   const timeIn = req.body.timeIn;
+//   const timeOut = req.body.timeOut;
+//   const cancel = req.body.cancel;
+
+//   const data = req.body;
+
+//   db.query(
+//     "SELECT * FROM carparking WHERE carparking_id = ?",
+//     [data.id],
+//     function (err, results, fields) {
+//       if (err) {
+//         res.json({ status: "400", message: err, success: false });
+//         return;
+//       }
+//       const value = results[0];
+//       const timeStart = moment(value.booking_goin, "HH:mm");
+//       const timeNow = moment();
+//       const minutesDiff = timeNow.diff(timeStart, "minutes");
+//       const cost =
+//         Math.ceil((minutesDiff / 60) * value.booking_price) +
+//           data.user.is_cancel >
+//         0
+//           ? 20
+//           : 0;
+//       if (data.user.is_cancel > 0) {
+//         db.query(
+//           "UPDATE users SET user_cancel = ?",
+//           [0],
+//           function (err, results, fields) {
+//             if (err) {
+//               return res.json({ status: "400", message: err });
+//             }
+//           }
+//         );
+//       }
+//       db.query(
+//         "UPDATE carparking_lane_status SET lane_status = ? ,user_booking = ?  WHERE carparking_id = ? AND lane_id = ?",
+//         [0, null, place, lane],
+//         function (err, results, fields) {
+//           if (err) {
+//             return res.json({ status: "400", message: err });
+//           }
+//           db.query(
+//             "UPDATE carbooking SET booking_status = ? , booking_price = ? ,booking_goout = ? WHERE booking_id = ?",
+//             ["จอดเสร็จสิ้น", cost, moment().format("HH:mm"), id],
+//             function (err, results, fields) {
+//               if (err) {
+//                 res.json({ status: "400", message: err });
+//                 return;
+//               }
+//               if (value.caparking_token) {
+//                 const lineNotify = require("line-notify-nodejs")(
+//                   value.caparking_token
+//                 );
+//                 lineNotify
+//                   .notify({
+//                     message: `แจ้งเตือนนำรถออกช่องจอดที่่:${data.lane} จำนวนเงินที่ต้องชำระ:${cost} บาท`,
+//                   })
+//                   .then(() => {
+//                     console.log("send completed!");
+//                   });
+//               }
+//               const client = mqtt.connect(
+//                 "mqtt://broker.mqttdashboard.com:1883"
+//               );
+//               client.on("connect", function () {
+//                 client.publish(
+//                   `barrier/status/${data.place}/${data.lane}`,
+//                   "close"
+//                 );
+//               });
+//               client.on("message", function (topic, message) {
+//                 console.log(message.toString());
+//                 client.end();
+//               });
+//               res.json({ status: "200", success: true });
+//             }
+//           );
+//         }
+//         //
+//       );
+//     }
+//   );
+// };
 
 exports.updateStatusGoOutCarparking = (req, res) => {
   const id = req.body.id;
   const place = req.body.place;
-  const lane = req.body.lane;
-  const timeIn = req.body.timeIn;
-  const timeOut = req.body.timeOut;
-  const cancel = req.body.cancel;
+  // const place = req.body.place;
+  // const lane = req.body.lane;
+  // const timeIn = req.body.timeIn;
+  // const timeOut = req.body.timeOut;
+  // const cancel = req.body.cancel;
 
   const data = req.body;
+  console.log("data", data);
 
   db.query(
-    "SELECT * FROM carparking WHERE carparking_id = ?",
-    [data.id],
+    "SELECT * FROM carparking_detail WHERE carparking_id = ?",
+    [place],
     function (err, results, fields) {
       if (err) {
         res.json({ status: "400", message: err, success: false });
@@ -822,12 +1094,11 @@ exports.updateStatusGoOutCarparking = (req, res) => {
       const timeNow = moment();
       const minutesDiff = timeNow.diff(timeStart, "minutes");
       const cost =
-        Math.ceil((minutesDiff / 60) * value.booking_price) +
-          data.user.is_cancel >
+        Math.ceil((minutesDiff / 60) * value.booking_price) + data.user.cancel >
         0
           ? 20
           : 0;
-      if (data.user.is_cancel > 0) {
+      if (data.user.cancel > 0) {
         db.query(
           "UPDATE users SET user_cancel = ?",
           [0],
@@ -840,7 +1111,7 @@ exports.updateStatusGoOutCarparking = (req, res) => {
       }
       db.query(
         "UPDATE carparking_lane_status SET lane_status = ? ,user_booking = ?  WHERE carparking_id = ? AND lane_id = ?",
-        [0, null, place, lane],
+        [0, null, place, value.booking_lane],
         function (err, results, fields) {
           if (err) {
             return res.json({ status: "400", message: err });
@@ -853,32 +1124,29 @@ exports.updateStatusGoOutCarparking = (req, res) => {
                 res.json({ status: "400", message: err });
                 return;
               }
-              if (value.caparking_token) {
-                const lineNotify = require("line-notify-nodejs")(
-                  value.caparking_token
-                );
-                lineNotify
-                  .notify({
-                    message: `แจ้งเตือนนำรถออกช่องจอดที่่:${data.lane} จำนวนเงินที่ต้องชำระ:${cost} บาท`,
-                  })
-                  .then(() => {
-                    console.log("send completed!");
-                  });
-              }
-              const client = mqtt.connect(
-                "mqtt://broker.mqttdashboard.com:1883"
+              db.query(
+                "UPDATE carparking_lane_detail SET status = ? , user_id = ? ,booking_id = ? WHERE carparking_id = ? AND lane_id = ?",
+                [0, data.user.cancel, id, place, value.booking_lane],
+                function (err, results, fields) {
+                  if (err) {
+                    res.json({ status: "400", message: err });
+                    return;
+                  }
+                  if (value.caparking_token) {
+                    const lineNotify = require("line-notify-nodejs")(
+                      value.caparking_token
+                    );
+                    lineNotify
+                      .notify({
+                        message: `แจ้งเตือนนำรถออกช่องจอดที่่:${value.booking_lane} จำนวนเงินที่ต้องชำระ:${cost} บาท`,
+                      })
+                      .then(() => {
+                        console.log("send completed!");
+                      });
+                  }
+                  res.json({ status: "200", success: true });
+                }
               );
-              client.on("connect", function () {
-                client.publish(
-                  `barrier/status/${data.place}/${data.lane}`,
-                  "close"
-                );
-              });
-              client.on("message", function (topic, message) {
-                console.log(message.toString());
-                client.end();
-              });
-              res.json({ status: "200", success: true });
             }
           );
         }

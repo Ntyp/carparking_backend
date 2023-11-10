@@ -25,7 +25,7 @@ const {
   getParkingInfo,
   getCarParkingList,
   updateLaneStatus,
-  updateCarparkingStatus
+  updateCarparkingStatus,
 } = require("../controllers/carkparking");
 
 const {
@@ -41,7 +41,9 @@ const {
   cronjob,
   bookingHistoryOwner,
   createBooking1,
-  updateCancelBooking,
+  updateCancelBooking1,
+  updateStatusGoInCarparking,
+  updateStatusGoOutCarparking
 } = require("../controllers/booking");
 
 const {
@@ -130,11 +132,13 @@ router.get("/getCarparkingByOwner/:owner", getCarparkingByOwner);
 router.get("/getParkingInfo/:id", getParkingInfo);
 router.get("/getParkingLaneStatus/:id", getParkingLaneStatus);
 
-router.get("/getParkingHistoryByPlace/:name", getParkingHistoryByPlace);
+router.get("/getParkingHistoryByPlace/:id", getParkingHistoryByPlace);
 router.get("/getCarParkingList", getCarParkingList); //ต้องแก้ไข Middleware
 
 router.post("/booking1", createBooking1);
-router.post("/updateCancelBooking", updateCancelBooking);
+router.post("/updateCancelBooking", updateCancelBooking1);
+router.post("/updateStatusGoInCarparking", updateStatusGoInCarparking);
+router.post("/updateStatusGoOutCarparking", updateStatusGoOutCarparking);
 
 // ============================================
 // Booking
