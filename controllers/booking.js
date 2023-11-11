@@ -955,7 +955,7 @@ exports.updateStatusGoInCarparking = async (req, res) => {
         [1, user, place, lane],
         function (err, results, fields) {
           if (err) {
-            res.json({ status: "400", message: err });
+            res.json({ status: "400", message: err, success: false });
             return;
           }
           db.query(
@@ -963,7 +963,7 @@ exports.updateStatusGoInCarparking = async (req, res) => {
             ["กำลังจอด", lane, moment().format("HH:mm"), id],
             function (err, results, fields) {
               if (err) {
-                res.json({ status: "400", message: err });
+                res.json({ status: "400", message: err, success: false });
                 return;
               }
               db.query(
@@ -998,7 +998,7 @@ exports.updateStatusGoInCarparking = async (req, res) => {
       return res.json({
         status: "400",
         message: "Fail to detect your license plate",
-        success: false
+        success: false,
       });
     }
   });
@@ -1156,8 +1156,8 @@ exports.updateStatusGoOutCarparking = (req, res) => {
                 return;
               }
               db.query(
-                "UPDATE carparking_lane_detail SET status = ? , user_id = ? ,booking_id = ? WHERE carparking_id = ? AND lane_id = ?",
-                [0, null, id, place, value.booking_lane],
+                "UPDATE carparking_lane_detail SET status = ? , user_id = ?,booking_id = ?  WHERE carparking_id = ? AND lane_id = ?",
+                [0, null, null, place, value.booking_lane],
                 function (err, results, fields) {
                   if (err) {
                     res.json({ status: "400", message: err });
