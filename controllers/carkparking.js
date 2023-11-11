@@ -317,6 +317,7 @@ exports.searchCarparking = (req, res) => {
 
 exports.getCarparkingByOwner = async (req, res) => {
   const user = [req.params["owner"]]; // carparking
+  console.log("user", user);
   db.query(
     "SELECT * FROM carparking_detail WHERE carparking_owner = ?",
     user,
@@ -325,6 +326,7 @@ exports.getCarparkingByOwner = async (req, res) => {
         res.json({ status: "400", message: err });
         return;
       }
+      console.log("results", results);
       res.json({ status: "200", data: results, success: true });
     }
   );
@@ -443,6 +445,35 @@ exports.updateLaneStatus = async (req, res) => {
       );
     }
   );
+};
+
+exports.searchCarparking = async (req, res) => {
+  const data = req.body;
+  if (data.name) {
+    db.query(
+      "SELECT * FROM carparking_detail WHERE carparking_name = ?",
+      [data.name],
+      function (err, results, fields) {
+        if (err) {
+          res.json({ status: "400", message: err });
+          return;
+        }
+        res.json({ status: "200", data: results, success: true });
+      }
+    );
+  } else {
+    db.query(
+      "SELECT * FROM carparking_detail",
+      [data.name],
+      function (err, results, fields) {
+        if (err) {
+          res.json({ status: "400", message: err });
+          return;
+        }
+        res.json({ status: "200", data: results, success: true });
+      }
+    );
+  }
 };
 
 // exports.createCarParkingLaneStatus = async (req, res) => {

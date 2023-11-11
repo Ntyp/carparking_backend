@@ -194,10 +194,12 @@ exports.createBooking1 = async (req, res) => {
       if (results) {
         const tokenBot = results[0].carparking_token;
         const laneId = results[0].lane_id;
+        const placeName = results[0].carparking_name;
         db.query(
-          "INSERT INTO carbooking (booking_place_id,booking_name,booking_tel,booking_plate,booking_lane,booking_time_in,booking_time_out,booking_date,booking_status,booking_user,is_cancel) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+          "INSERT INTO carbooking (booking_place_id,booking_place,booking_name,booking_tel,booking_plate,booking_lane,booking_time_in,booking_time_out,booking_date,booking_status,booking_user,is_cancel) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
           [
             data.id,
+            placeName,
             data.name,
             data.tel,
             data.plate,
@@ -441,7 +443,7 @@ exports.deleteBooking = async (req, res) => {
         res.json({ status: "400", message: err });
         return;
       }
-      res.json({ status: "200", data: results, success: true });
+      res.json({ status: "200", success: true });
     }
   );
 };
@@ -789,13 +791,13 @@ exports.updateCancelBooking1 = (req, res) => {
 
       const timeDiff = timeStart.diff(timeNow, "minutes");
       // ถ้าเกิน15นาทียกเลิกไม่ได้
-      // if (timeDiff > 15) {
-      //   return res.json({
-      //     status: "400",
-      //     message: "Time over 15 minutes",
-      //     success: false,
-      //   });
-      // }
+      if (timeDiff > 15) {
+        return res.json({
+          status: "400",
+          message: "Time over 15 minutes",
+          success: false,
+        });
+      }
       db.query(
         "UPDATE carparking_lane_status SET lane_status = ?,user_booking = ?  WHERE carparking_id = ? AND lane_id = ? AND time_booking BETWEEN ? AND ?",
         [

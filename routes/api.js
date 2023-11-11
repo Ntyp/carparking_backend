@@ -26,6 +26,7 @@ const {
   getCarParkingList,
   updateLaneStatus,
   updateCarparkingStatus,
+  searchCarparking
 } = require("../controllers/carkparking");
 
 const {
@@ -92,6 +93,8 @@ router.delete("/logout", logout);
 //@Method       DELETE
 //@Access       Publish
 router.delete("/user/:id", deleteUser);
+
+
 
 //@Endpoint     http://localhost:6969/api/user/:id
 //@Method       PUT
@@ -236,6 +239,7 @@ router.get("/listOwnerOnly", listOwnerOnly);
 router.post("/updateLaneStatus", updateLaneStatus);
 router.post("/updateCarparkingStatus", updateCarparkingStatus);
 
+router.post("/searchCarparking", searchCarparking);
 
 
 
