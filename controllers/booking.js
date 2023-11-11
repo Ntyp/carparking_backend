@@ -948,6 +948,62 @@ exports.updateStatusGoInCarparking = async (req, res) => {
   client.on("message", function (topic, message) {
     const barrier_status = message.toString();
     console.log(barrier_status);
+    // setTimeout(() => {
+    //   if (barrier_status == "true") {
+    //     client.end();
+    //     db.query(
+    //       "UPDATE carparking_lane_detail SET status = ?, user_id = ? WHERE carparking_id = ? AND lane_id = ?",
+    //       [1, user, place, lane],
+    //       function (err, results, fields) {
+    //         if (err) {
+    //           res.json({ status: "400", message: err, success: false });
+    //           return;
+    //         }
+    //         db.query(
+    //           "UPDATE carbooking SET booking_status = ?, booking_lane = ?,booking_goin = ? WHERE booking_id = ?",
+    //           ["กำลังจอด", lane, moment().format("HH:mm"), id],
+    //           function (err, results, fields) {
+    //             if (err) {
+    //               res.json({ status: "400", message: err, success: false });
+    //               return;
+    //             }
+    //             db.query(
+    //               "SELECT * FROM carparking_detail WHERE carparking_id = ?",
+    //               [place],
+    //               function (err, results, fields) {
+    //                 if (err) {
+    //                   res.json({ status: "400", message: err, success: false });
+    //                   return;
+    //                 }
+    //                 const tokenBot = results[0].caparking_token;
+    //                 if (tokenBot) {
+    //                   const lineNotify =
+    //                     require("line-notify-nodejs")(tokenBot);
+    //                   lineNotify
+    //                     .notify({
+    //                       message: `แจ้งเตือนนำรถเข้าช่องจอดที่่:${lane} เวลา:${moment().format(
+    //                         "DD/MM/YYYY HH:mm:ss"
+    //                       )}`,
+    //                     })
+    //                     .then(() => {
+    //                       console.log("send completed!");
+    //                     });
+    //                 }
+    //                 res.json({ status: "200", success: true });
+    //               }
+    //             );
+    //           }
+    //         );
+    //       }
+    //     );
+    //   } else {
+    //     return res.json({
+    //       status: "400",
+    //       message: "Fail to detect your license plate",
+    //       success: false,
+    //     });
+    //   }
+    // }, 5000);
     if (barrier_status == "true") {
       client.end();
       db.query(
