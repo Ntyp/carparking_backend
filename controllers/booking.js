@@ -936,50 +936,71 @@ exports.updateCancelBooking1 = (req, res) => {
 exports.updateStatusGoInCarparking = async (req, res) => {
   const { place, id, user, lane } = req.body;
   console.log(req.body);
-  db.query(
-    "UPDATE carparking_lane_detail SET status = ?, user_id = ? WHERE carparking_id = ? AND lane_id = ?",
-    [1, user, place, lane],
-    function (err, results, fields) {
+  const client = mqtt.connect("mqtt://broker.mqttdashboard.com:1883");
+  client.on("connect", function () {
+    client.subscribe("alert/status", function (err) {
       if (err) {
-        res.json({ status: "400", message: err });
-        return;
+        console.log(err);
       }
+    });
+    client.publish(`barrier/status/${place}/${lane}`, "open");
+  });
+  client.on("message", function (topic, message) {
+    const barrier_status = message.toString();
+    console.log(barrier_status);
+    if (barrier_status == "true") {
+      client.end();
       db.query(
-        "UPDATE carbooking SET booking_status = ?, booking_lane = ?,booking_goin = ? WHERE booking_id = ?",
-        ["กำลังจอด", lane, moment().format("HH:mm"), id],
+        "UPDATE carparking_lane_detail SET status = ?, user_id = ? WHERE carparking_id = ? AND lane_id = ?",
+        [1, user, place, lane],
         function (err, results, fields) {
           if (err) {
             res.json({ status: "400", message: err });
             return;
           }
           db.query(
-            "SELECT * FROM carparking_detail WHERE carparking_id = ?",
-            [place],
+            "UPDATE carbooking SET booking_status = ?, booking_lane = ?,booking_goin = ? WHERE booking_id = ?",
+            ["กำลังจอด", lane, moment().format("HH:mm"), id],
             function (err, results, fields) {
               if (err) {
-                res.json({ status: "400", message: err, success: false });
+                res.json({ status: "400", message: err });
                 return;
               }
-              const tokenBot = results[0].caparking_token;
-              if (tokenBot) {
-                const lineNotify = require("line-notify-nodejs")(tokenBot);
-                lineNotify
-                  .notify({
-                    message: `แจ้งเตือนนำรถเข้าช่องจอดที่่:${lane} เวลา:${moment().format(
-                      "DD/MM/YYYY HH:mm:ss"
-                    )}`,
-                  })
-                  .then(() => {
-                    console.log("send completed!");
-                  });
-              }
-              res.json({ status: "200", success: true });
+              db.query(
+                "SELECT * FROM carparking_detail WHERE carparking_id = ?",
+                [place],
+                function (err, results, fields) {
+                  if (err) {
+                    res.json({ status: "400", message: err, success: false });
+                    return;
+                  }
+                  const tokenBot = results[0].caparking_token;
+                  if (tokenBot) {
+                    const lineNotify = require("line-notify-nodejs")(tokenBot);
+                    lineNotify
+                      .notify({
+                        message: `แจ้งเตือนนำรถเข้าช่องจอดที่่:${lane} เวลา:${moment().format(
+                          "DD/MM/YYYY HH:mm:ss"
+                        )}`,
+                      })
+                      .then(() => {
+                        console.log("send completed!");
+                      });
+                  }
+                  res.json({ status: "200", success: true });
+                }
+              );
             }
           );
         }
       );
+    } else {
+      return res.json({
+        status: "400",
+        message: "Fail to detect your license plate",
+      });
     }
-  );
+  });
 };
 
 // exports.updateStatusGoOutCarparking = (req, res) => {
@@ -1112,8 +1133,15 @@ exports.updateStatusGoOutCarparking = (req, res) => {
         );
       }
       db.query(
-        "UPDATE carparking_lane_status SET lane_status = ? ,user_booking = ?  WHERE carparking_id = ? AND lane_id = ?",
-        [0, null, place, value.booking_lane],
+        "UPDATE carparking_lane_status SET lane_status = ? ,user_booking = ?  WHERE carparking_id = ? AND lane_id = ? and time_booking between ? and ?",
+        [
+          0,
+          null,
+          place,
+          value.booking_lane,
+          value.booking_time_in,
+          value.booking_time_out,
+        ],
         function (err, results, fields) {
           if (err) {
             return res.json({ status: "400", message: err });
@@ -1146,6 +1174,19 @@ exports.updateStatusGoOutCarparking = (req, res) => {
                         console.log("send completed!");
                       });
                   }
+                  const client = mqtt.connect(
+                    "mqtt://broker.mqttdashboard.com:1883"
+                  );
+                  client.on("connect", function () {
+                    client.publish(
+                      `barrier/status/${value.booking_place}/${data.booking_lane}`,
+                      "close"
+                    );
+                  });
+                  client.on("message", function (topic, message) {
+                    console.log(message.toString());
+                    client.end();
+                  });
                   res.json({ status: "200", success: true });
                 }
               );
