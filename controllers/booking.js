@@ -1180,7 +1180,7 @@ exports.updateStatusGoOutCarparking = (req, res) => {
                   );
                   client.on("connect", function () {
                     client.publish(
-                      `barrier/status/${value.booking_place}/${data.booking_lane}`,
+                      `barrier/status/${place}/${data.booking_lane}`,
                       "close"
                     );
                   });
