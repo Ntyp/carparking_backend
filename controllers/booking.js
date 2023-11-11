@@ -998,6 +998,7 @@ exports.updateStatusGoInCarparking = async (req, res) => {
       return res.json({
         status: "400",
         message: "Fail to detect your license plate",
+        success: false
       });
     }
   });
