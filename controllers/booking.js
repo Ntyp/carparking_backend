@@ -1157,7 +1157,7 @@ exports.updateStatusGoOutCarparking = (req, res) => {
               }
               db.query(
                 "UPDATE carparking_lane_detail SET status = ? , user_id = ? ,booking_id = ? WHERE carparking_id = ? AND lane_id = ?",
-                [0, data.user.cancel, id, place, value.booking_lane],
+                [0, null, id, place, value.booking_lane],
                 function (err, results, fields) {
                   if (err) {
                     res.json({ status: "400", message: err });
