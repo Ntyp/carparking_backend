@@ -1177,15 +1177,12 @@ exports.updateStatusGoOutCarparking = (req, res) => {
         [id],
         function (err, result, fields) {
           const value1 = result[0];
-          const timeStart = moment(value.booking_goin, "HH:mm");
+          //const timeStart = moment(value.booking_goin, "HH:mm");
+		  const timeStart = moment(value.booking_time_in, "HH:mm");
           const timeNow = moment();
           const minutesDiff = timeNow.diff(timeStart, "minutes");
-          const cost =
-            Math.ceil((minutesDiff / 60) * value.booking_price) +
-              data.user.cancel >
-            0
-              ? 20
-              : 0;
+          let cost = Math.ceil((minutesDiff / 60) * 20);
+      	  cost = data.user.cancel > 0 ? cost + 20 : cost + 0;
           if (data.user.cancel > 0) {
             db.query(
               "UPDATE users SET user_cancel = ?",
